@@ -1,0 +1,15 @@
+# 编译产物
+practice/*/trace_openat
+practice/*/kprobe_tcp
+practice/*/xdp_drop
+practice/*/ringbuf_event
+practice/*/core_task_info
+practice/*/*.bpf.o
+practice/*/*.skel.h
+
+# 生成文件
+practice/vmlinux.h
+practice/bpf/
+
+# 工具
+practice/tooling/
