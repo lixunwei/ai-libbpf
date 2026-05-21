@@ -2,24 +2,26 @@
 
 基于 [libbpf](https://github.com/libbpf/libbpf) v1.8.0 的全方位源码分析，配合可编译的 BPF 示例程序和调试实践指南。
 
-## 📚 分析文档
+## 📚 分析文档（12 篇，~8100 行）
 
-| 文档 | 内容概要 |
-|------|----------|
-| [架构总览](libbpf_architecture_overview.md) | API 分层设计、核心数据结构、模块依赖关系 |
-| [程序加载流程](libbpf_program_loading_deep.md) | `open → prepare → load` 完整调用链（含源码行号） |
-| [BTF 与 CO-RE](libbpf_btf_core_deep.md) | BTF 解析/dedup/上传 + CO-RE 重定位引擎全解析 |
-| [Syscall 封装层](libbpf_syscall_layer_deep.md) | `bpf.c` 中所有 `bpf()` 系统调用的封装 |
-| [ELF 解析与链接器](libbpf_elf_linker_deep.md) | ELF section 解析 + BPF 静态链接器 |
-| [Ring Buffer 与 USDT](libbpf_ringbuf_usdt_deep.md) | 高性能数据通道 + 用户态探针 |
-| [Netlink 与特性探测](libbpf_netlink_features_deep.md) | 网络子系统交互 + 内核特性检测 |
-| [Skeleton 与 gen_loader](libbpf_skeleton_genloader_deep.md) | 代码生成 + 轻量级加载器 |
-| [内核交叉引用](libbpf_kernel_correlation.md) | libbpf 函数 ↔ 内核实现对照表 |
-| [分析计划](libbpf_analysis_plan.md) | 完整项目规划与执行记录 |
+| 文档 | 行数 | 内容概要 |
+|------|------|----------|
+| [架构总览](libbpf_architecture_overview.md) | 494 | API 分层设计、核心数据结构、模块依赖关系 |
+| [程序加载流程](libbpf_program_loading_deep.md) | 695 | `open → prepare → load` 完整调用链（含源码行号） |
+| [Attach 机制](libbpf_attach_mechanism_deep.md) | 1362 | 12 种 attach 类型全解析（perf/trampoline/netlink/cgroup） |
+| [BTF 与 CO-RE](libbpf_btf_core_deep.md) | 1438 | BTF 解析/dedup/上传 + CO-RE 重定位引擎全解析 |
+| [BTF Dump](libbpf_btf_dump_deep.md) | 793 | vmlinux.h 生成核心：拓扑排序 + C 类型声明发射 |
+| [Syscall 封装层](libbpf_syscall_layer_deep.md) | 305 | `bpf.c` 中所有 `bpf()` 系统调用的封装 |
+| [ELF 解析与链接器](libbpf_elf_linker_deep.md) | 426 | ELF section 解析 + BPF 静态链接器 |
+| [Ring Buffer 与 USDT](libbpf_ringbuf_usdt_deep.md) | 346 | 高性能数据通道 + 用户态探针 |
+| [Netlink 与特性探测](libbpf_netlink_features_deep.md) | 355 | 网络子系统交互 + 内核特性检测 |
+| [Skeleton 与 gen_loader](libbpf_skeleton_genloader_deep.md) | 364 | 代码生成 + 轻量级加载器 |
+| [内核交叉引用](libbpf_kernel_correlation.md) | 297 | libbpf 函数 ↔ 内核实现对照表 |
+| [分析计划](libbpf_analysis_plan.md) | 630 | 完整项目规划与执行记录 |
 
 ## 🔧 实践示例
 
-5 个可编译运行的 BPF 程序，覆盖主要使用场景：
+8 个可编译运行的 BPF 程序，覆盖主要使用场景：
 
 ```
 practice/
@@ -27,7 +29,10 @@ practice/
 ├── kprobe_example/       # kprobe 跟踪 tcp_connect
 ├── xdp_example/          # XDP 包统计与丢弃
 ├── ringbuf_example/      # sched_process_exec 进程事件
-└── core_portable/        # CO-RE 可移植 task_struct 读取
+├── core_portable/        # CO-RE 可移植 task_struct 读取
+├── fentry_example/       # fentry/fexit 跟踪 tcp_sendmsg（BPF trampoline）
+├── lsm_example/          # BPF LSM hook 文件访问控制
+└── cgroup_example/       # cgroup_skb 出向流量统计与控制
 ```
 
 ### 编译
@@ -65,13 +70,13 @@ sudo ./practice/xdp_example/xdp_drop <interface>
 
 ```
 .
-├── *.md                    # 10 篇源码分析文档（中文）
+├── *.md                    # 12 篇源码分析文档（中文）
 └── practice/
     ├── Makefile            # 顶层构建（自动编译 libbpf + 示例）
     ├── QEMU_SETUP.md       # QEMU 调试环境
     ├── DEBUG_GUIDE.md      # 调试工具使用
     ├── BTF_CORE_PRACTICE.md # BTF/CO-RE 实验
-    └── {5个示例目录}/
+    └── {8个示例目录}/
         ├── *.bpf.c        # BPF 内核态程序
         ├── *.c            # 用户态加载程序
         ├── Makefile        # 子目录编译
