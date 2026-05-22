@@ -34,7 +34,10 @@ practice/
 ├── core_portable/        # CO-RE 可移植 task_struct 读取
 ├── fentry_example/       # fentry/fexit 跟踪 tcp_sendmsg（BPF trampoline）
 ├── lsm_example/          # BPF LSM hook 文件访问控制
-└── cgroup_example/       # cgroup_skb 出向流量统计与控制
+├── cgroup_example/       # cgroup_skb 出向流量统计与控制
+├── tc_example/           # TC ingress 流量分类与端口封锁
+├── struct_ops_example/   # BPF struct_ops TCP 拥塞控制算法
+└── iter_example/         # BPF 迭代器遍历所有进程信息
 ```
 
 ### 编译
