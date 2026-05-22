@@ -2,7 +2,7 @@
 
 基于 [libbpf](https://github.com/libbpf/libbpf) v1.8.0 的全方位源码分析，配合可编译的 BPF 示例程序和调试实践指南。
 
-## 📚 分析文档（12 篇，~8100 行）
+## 📚 分析文档（14 篇，~9500 行）
 
 | 文档 | 行数 | 内容概要 |
 |------|------|----------|
@@ -11,6 +11,8 @@
 | [Attach 机制](libbpf_attach_mechanism_deep.md) | 1362 | 12 种 attach 类型全解析（perf/trampoline/netlink/cgroup） |
 | [BTF 与 CO-RE](libbpf_btf_core_deep.md) | 1438 | BTF 解析/dedup/上传 + CO-RE 重定位引擎全解析 |
 | [BTF Dump](libbpf_btf_dump_deep.md) | 793 | vmlinux.h 生成核心：拓扑排序 + C 类型声明发射 |
+| [Map 操作大全](libbpf_map_operations.md) | 659 | 30+ 种 map 类型、53 个 API、BTF-defined 声明语法 |
+| [API 版本演进](libbpf_api_evolution.md) | 558 | 26 个版本变更历史、opts 模式、1.0 breaking changes |
 | [Syscall 封装层](libbpf_syscall_layer_deep.md) | 305 | `bpf.c` 中所有 `bpf()` 系统调用的封装 |
 | [ELF 解析与链接器](libbpf_elf_linker_deep.md) | 426 | ELF section 解析 + BPF 静态链接器 |
 | [Ring Buffer 与 USDT](libbpf_ringbuf_usdt_deep.md) | 346 | 高性能数据通道 + 用户态探针 |
