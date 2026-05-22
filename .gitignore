@@ -7,12 +7,17 @@ practice/*/core_task_info
 practice/*/fentry_tcp
 practice/*/lsm_file_open
 practice/*/cgroup_egress
+practice/*/tc_example
+practice/*/struct_ops_example
+practice/*/iter_example
 practice/*/*.bpf.o
 practice/*/*.skel.h
 
 # 生成文件
 practice/vmlinux.h
 practice/bpf/
+practice/*/vmlinux.h
+practice/*/bpf
 
 # 工具
 practice/tooling/
