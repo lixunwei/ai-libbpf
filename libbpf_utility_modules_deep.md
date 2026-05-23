@@ -832,10 +832,164 @@ libbpf 对外提供的便利封装；；供外部工具、调试器或上层应�
 1. 先复制内核返回的原始数据，再建立自己的索引；2. 基础 line info 能力与 jited 增强能力分层，缺一部分时也尽量返回可用对象；3. 用两张数组索引把全局 jited line info 按函数切片；4. 对 record size、地址单调性、长度边界做保守校验；5. 查询路径保持简单，优先稳定和可读性，而不是过早复杂化。
 因此 `bpf_prog_linfo.c` 的价值并不在于算法炫目，而在于它把原本较难直接消费的 `bpf_prog_info` 元数据整理成了稳定、可查询、可复用的工具对象。
 ---
-## 7. 总结：六个模块共同体现的 libbpf 工具层风格
-把这六个文件放在一起看，它们共同展现出非常典型的 libbpf 工具层风格。
-第一，职责边界极窄。`zip.c` 只做 APK/ZIP entry 定位，`btf_iter.c` 只做字段遍历，`strset.c` 只做字符串 blob 去重，`libbpf_probes.c` 只做 capability probe recipe。这种“小模块 + 强边界”的做法让上层大文件更容易维持结构清晰。
-第二，优先工程上足够好的方案，而不是抽象上最通用的方案。`zip.c` 不追求完整 ZIP，`hashmap.c` 不追求线程安全或高级哈希技巧，`strset.c` 接受未提交尾部垃圾，`bpf_prog_linfo.c` 用线性扫描而不是复杂索引，都是这种风格的体现。
-第三，基础设施一旦写对，复用面很广。`hashmap.c` 贯穿 BTF、CO-RE、USDT、`strset`、`btf_dump`；`strset.c` 同时支撑 BTF 与 linker；`btf_iter.c` 同时支撑 BTF add/dedup/relocate/link；`libbpf_probes.c` 则把不同 program/map/helper 的能力判定统一抽象到最小 probe 路径之上。
-第四，libbpf 很擅长把“格式知识”与“业务流程”分离。`zip.c` 把 ZIP 格式解析从 `libbpf.c` 中剥离；`btf_iter.c` 把 BTF kind-specific 遍历从 `btf.c` / `linker.c`中剥离；`strset.c` 把字符串表构建从 BTF 与 ELF 链接逻辑中剥离。这让上层文件可以更多表达“要做什么”，而不是“底层格式怎么遍历”。
-所以，这六个文件虽然都不算“明星模块”，却共同构成了 libbpf 能保持可维护性的重要原因：复杂的大功能并不是靠单个巨型文件堆出来的，而是靠一批边界清楚、复用率高、工程判断细致的工具模块支撑起来的。
+## 7. libbpf_utils.c — 错误处理与 SHA-256
+
+### 7.1 概述
+
+`libbpf_utils.c` (256 行) 包含两个不相关的功能模块：
+
+1. **错误码字符串化** — 将 libbpf 自定义错误码和系统 errno 转为可读字符串
+2. **SHA-256 哈希** — 纯 C 实现的 SHA-256 算法（无外部依赖）
+
+### 7.2 错误处理
+
+#### libbpf_strerror()
+
+公开 API，处理三类错误码：
+
+```c
+int libbpf_strerror(int err, char *buf, size_t size)
+{
+    if (err < __LIBBPF_ERRNO__START)
+        return strerror_r(err, buf, size);     // 标准系统错误
+    if (err < __LIBBPF_ERRNO__END)
+        return snprintf(buf, size, "%s", libbpf_strerror_table[...]);  // libbpf 自定义错误
+    return snprintf(buf, size, "Unknown libbpf error %d", err);  // 未知
+}
+```
+
+libbpf 定义了 10 个自定义错误码（LIBELF/FORMAT/KVERSION/ENDIAN/INTERNAL/
+RELOC/VERIFY/PROG2BIG/KVER/PROGTYPE/WRNGPID/INVSEQ/NLPARSE），均映射到
+`libbpf_strerror_table[]` 中的描述字符串。
+
+#### libbpf_errstr()
+
+内部使用的轻量级版本，通过 switch-case 直接返回 errno 的字符串名：
+
+```c
+const char *libbpf_errstr(int err)
+{
+    switch (err) {
+    case -EINVAL: return "-EINVAL";
+    case -ENOMEM: return "-ENOMEM";
+    // ... 约 50 个 errno
+    default:
+        snprintf(buf, sizeof(buf), "%d", err);  // thread-local buffer
+        return buf;
+    }
+}
+```
+
+在 libbpf 内部通过 `#define errstr(err) libbpf_errstr(err)` 宏广泛使用于
+`pr_warn("failed: %s\n", errstr(err))` 风格的日志输出。
+
+### 7.3 SHA-256 实现
+
+libbpf 内嵌了完整的 SHA-256 实现，避免对 OpenSSL/libcrypto 的外部依赖。
+
+**调用者**：
+- `libbpf.c:4603` — 计算 BPF 程序指令的哈希值（用于程序去重/标识）
+- `gen_loader.c:462` — gen_loader 数据段哈希
+
+**实现**：标准 FIPS 180-4 SHA-256 算法，64 轮压缩，使用循环展开优化（每次
+处理 8 轮），支持任意长度输入的 padding 处理。
+
+```c
+void libbpf_sha256(const void *data, size_t len, __u8 out[SHA256_DIGEST_LENGTH])
+```
+
+**设计选择**：自包含实现而非依赖外部库，保持 libbpf 的最小依赖特性
+（仅依赖 libelf + zlib）。
+
+---
+
+## 8. nlattr.c — Netlink 属性编解码
+
+### 8.1 概述
+
+`nlattr.c` (194 行) 实现了 Netlink 消息中 TLV (Type-Length-Value) 属性的
+解析与验证。这是 libbpf 与内核通过 Netlink 协议通信的基础设施。
+
+### 8.2 Netlink 属性格式
+
+```
+┌─────────────────────────────────┐
+│ struct nlattr                   │
+│ ├── nla_len:  属性总长度 (含头) │
+│ └── nla_type: 属性类型          │
+├─────────────────────────────────┤
+│ payload (变长数据)              │
+├─────────────────────────────────┤
+│ padding (对齐到 4 字节)         │
+└─────────────────────────────────┘
+```
+
+### 8.3 核心函数
+
+#### libbpf_nla_parse() — 属性流解析
+
+将连续的 Netlink 属性流解析为按类型索引的数组：
+
+```c
+int libbpf_nla_parse(struct nlattr *tb[], int maxtype,
+                     struct nlattr *head, int len,
+                     struct libbpf_nla_policy *policy)
+```
+
+遍历属性流，按 `nla_type` 存入 `tb[]` 数组。如果提供了 `policy`，
+同时进行类型和长度验证。
+
+#### libbpf_nla_parse_nested() — 嵌套属性解析
+
+对嵌套属性（属性的 payload 本身是属性流）递归调用 `libbpf_nla_parse()`。
+
+#### libbpf_nla_dump_errormsg() — 错误消息提取
+
+从 Netlink ACK 消息中提取内核扩展错误信息 (`NLMSGERR_ATTR_MSG`)：
+
+```c
+int libbpf_nla_dump_errormsg(struct nlmsghdr *nlh)
+{
+    // 解析 NLM_F_ACK_TLVS 中的扩展属性
+    // 提取并打印内核错误消息
+}
+```
+
+### 8.4 验证策略
+
+通过 `libbpf_nla_policy` 结构定义每种属性类型的约束：
+
+| 属性类型 | 最小长度 |
+|---------|---------|
+| NLA_U8 | 1 字节 |
+| NLA_U16 | 2 字节 |
+| NLA_U32 | 4 字节 |
+| NLA_U64 | 8 字节 |
+| NLA_STRING | 1 字节 (需 NULL 结尾) |
+| NLA_FLAG | 0 字节 |
+
+### 8.5 调用关系
+
+`nlattr.c` 专供 `netlink.c` 使用：
+
+```
+netlink.c
+├── libbpf_nla_parse()           — 解析 CTRL_ATTR、IFLA、TCA 等属性
+├── libbpf_nla_parse_nested()    — 解析 IFLA_XDP、TCA_BPF 嵌套属性
+└── libbpf_nla_dump_errormsg()   — 提取 Netlink 错误消息
+```
+
+具体调用场景：
+- XDP 程序查询：解析 `IFLA_XDP` 嵌套属性获取 XDP 程序 ID
+- TC 程序查询：解析 `TCA_BPF` 嵌套属性获取 TC 过滤器信息
+- 通用 Netlink 族 ID 发现：解析 `CTRL_ATTR_FAMILY_ID`
+
+---
+
+## 9. 总结：八个模块共同体现的 libbpf 工具层风格
+把这八个文件放在一起看，它们共同展现出非常典型的 libbpf 工具层风格。
+第一，职责边界极窄。`zip.c` 只做 APK/ZIP entry 定位，`btf_iter.c` 只做字段遍历，`strset.c` 只做字符串 blob 去重，`libbpf_probes.c` 只做 capability probe recipe，`nlattr.c` 只做 Netlink TLV 解析，`libbpf_utils.c` 只做错误字符串化和哈希。这种"小模块 + 强边界"的做法让上层大文件更容易维持结构清晰。
+第二，优先工程上足够好的方案，而不是抽象上最通用的方案。`zip.c` 不追求完整 ZIP，`hashmap.c` 不追求线程安全或高级哈希技巧，`strset.c` 接受未提交尾部垃圾，`bpf_prog_linfo.c` 用线性扫描而不是复杂索引，`libbpf_utils.c` 自带 SHA-256 而非引入外部加密库，都是这种风格的体现。
+第三，基础设施一旦写对，复用面很广。`hashmap.c` 贯穿 BTF、CO-RE、USDT、`strset`、`btf_dump`；`strset.c` 同时支撑 BTF 与 linker；`btf_iter.c` 同时支撑 BTF add/dedup/relocate/link；`libbpf_probes.c` 则把不同 program/map/helper 的能力判定统一抽象到最小 probe 路径之上；`libbpf_errstr()` 通过宏定义成为所有模块的标准错误输出方式。
+第四，libbpf 很擅长把"格式知识"与"业务流程"分离。`zip.c` 把 ZIP 格式解析从 `libbpf.c` 中剥离；`btf_iter.c` 把 BTF kind-specific 遍历从 `btf.c` / `linker.c`中剥离；`strset.c` 把字符串表构建从 BTF 与 ELF 链接逻辑中剥离；`nlattr.c` 把 Netlink TLV 编解码从 `netlink.c` 的业务逻辑中剥离。这让上层文件可以更多表达"要做什么"，而不是"底层格式怎么遍历"。
+所以，这八个文件虽然都不算"明星模块"，却共同构成了 libbpf 能保持可维护性的重要原因：复杂的大功能并不是靠单个巨型文件堆出来的，而是靠一批边界清楚、复用率高、工程判断细致的工具模块支撑起来的。
