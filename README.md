@@ -20,6 +20,7 @@
 | [Skeleton 与 gen_loader](libbpf_skeleton_genloader_deep.md) | 364 | 代码生成 + 轻量级加载器 |
 | [内核交叉引用](libbpf_kernel_correlation.md) | 297 | libbpf 函数 ↔ 内核实现对照表 |
 | [工具模块深度分析](libbpf_utility_modules_deep.md) | 841 | probes/zip/hashmap/strset/btf_iter/linfo |
+| [BTF 重定位机制](libbpf_btf_relocate_deep.md) | 358 | Split BTF 蒸馏与跨版本重定位 |
 | [分析计划](libbpf_analysis_plan.md) | 630 | 完整项目规划与执行记录 |
 
 ## 🔧 实践示例
