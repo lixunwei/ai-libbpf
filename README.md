@@ -21,6 +21,7 @@
 | [内核交叉引用](libbpf_kernel_correlation.md) | 297 | libbpf 函数 ↔ 内核实现对照表 |
 | [工具模块深度分析](libbpf_utility_modules_deep.md) | 995 | probes/zip/hashmap/strset/btf_iter/linfo/utils/nlattr |
 | [BTF 重定位机制](libbpf_btf_relocate_deep.md) | 358 | Split BTF 蒸馏与跨版本重定位 |
+| [性能对比分析](perf_benchmark_analysis.md) | 204 | kprobe/fentry/tracepoint 开销对比 |
 | [分析计划](libbpf_analysis_plan.md) | 630 | 完整项目规划与执行记录 |
 
 ## 🔧 实践示例
@@ -39,7 +40,8 @@ practice/
 ├── cgroup_example/       # cgroup_skb 出向流量统计与控制
 ├── tc_example/           # TC ingress 流量分类与端口封锁
 ├── struct_ops_example/   # BPF struct_ops TCP 拥塞控制算法
-└── iter_example/         # BPF 迭代器遍历所有进程信息
+├── iter_example/         # BPF 迭代器遍历所有进程信息
+└── perf_benchmark/       # kprobe/fentry/tracepoint 性能对比实验
 ```
 
 ### 编译
