@@ -10,6 +10,7 @@ practice/*/cgroup_egress
 practice/*/tc_example
 practice/*/struct_ops_example
 practice/*/iter_example
+practice/*/perf_benchmark
 practice/*/*.bpf.o
 practice/*/*.skel.h
 

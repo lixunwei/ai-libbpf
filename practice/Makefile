@@ -3,7 +3,7 @@ LIBBPF_OBJ := $(LIBBPF_SRC)/libbpf.a
 CLANG ?= clang-14
 BPFTOOL ?= $(abspath tooling/bpftool)
 CC ?= gcc
-SUBDIRS := tracepoint_example kprobe_example xdp_example ringbuf_example core_portable fentry_example lsm_example cgroup_example tc_example struct_ops_example iter_example
+SUBDIRS := tracepoint_example kprobe_example xdp_example ringbuf_example core_portable fentry_example lsm_example cgroup_example tc_example struct_ops_example iter_example perf_benchmark
 
 .PHONY: all clean $(SUBDIRS)
 
